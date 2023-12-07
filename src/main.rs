@@ -1,5 +1,3 @@
-use std::net::SocketAddr;
-
 use axum::{
     extract::{Path, Query},
     http::{Method, Uri},
@@ -8,9 +6,9 @@ use axum::{
     routing::{get, get_service},
     Json, Router,
 };
-use ctx::Ctx;
 use serde::Deserialize;
 use serde_json::json;
+use tokio::net::TcpListener;
 use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
 use uuid::Uuid;
@@ -18,6 +16,7 @@ use uuid::Uuid;
 use crate::log::log_request;
 
 pub use self::error::{Error, Result};
+use ctx::Ctx;
 mod ctx;
 mod error;
 mod log;
@@ -43,10 +42,10 @@ async fn main() -> Result<()> {
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    println!("Listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(routes_all.into_make_service())
+    // let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+    println!("Listening on {:?}", listener.local_addr());
+    axum::serve(listener, routes_all.into_make_service())
         .await
         .unwrap();
 

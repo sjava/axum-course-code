@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use axum::body::Body;
 use axum::extract::{FromRequestParts, State};
 use axum::http::request::Parts;
 use axum::http::Request;
@@ -12,11 +13,11 @@ use crate::model::ModelController;
 use crate::web::AUTH_TOKEN;
 use crate::{Error, Result};
 
-pub async fn mw_ctx_resolver<B>(
+pub async fn mw_ctx_resolver(
     _mc: State<ModelController>,
     cookies: Cookies,
-    mut req: Request<B>,
-    next: Next<B>,
+    mut req: Request<Body>,
+    next: Next,
 ) -> Result<Response> {
     println!("->> {:<12} - mw_ctx_resolver", "MIDDLEWARE");
 
@@ -29,16 +30,16 @@ pub async fn mw_ctx_resolver<B>(
         Err(e) => Err(e),
     };
     if result_ctx.is_err() && !matches!(result_ctx, Err(Error::AuthFailTokenWrongFormat)) {
-        cookies.remove(Cookie::named(AUTH_TOKEN));
+        cookies.remove(Cookie::from(AUTH_TOKEN));
     }
     req.extensions_mut().insert(result_ctx);
     Ok(next.run(req).await)
 }
 
-pub async fn mw_require_auth<B>(
+pub async fn mw_require_auth(
     ctx: Result<Ctx>,
-    req: Request<B>,
-    next: Next<B>,
+    req: Request<Body>,
+    next: Next,
 ) -> Result<Response> {
     println!("->> {:<12} - mw_require_auth - {ctx:?}", "MIDDLEWARE");
 
